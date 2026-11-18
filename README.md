@@ -1,53 +1,65 @@
 # AppForge
 
-Enterprise autonomous software-development platform. AppForge is independent and has no runtime dependency on any other application.
+Enterprise autonomous software-development platform. AppForge is an independent application and has no runtime dependency on other projects.
 
-## Current status
+## Current implementation
 
-**Early implementation.** The repository includes a FastAPI service, browser dashboard, six-role deterministic agent planner, plan-only adapters for AWS/Azure/Google Cloud, a production-approval policy, automated tests, and GitHub Actions CI. This is not yet a production-ready autonomous coding platform: agents do not call LLMs, execute code, or deploy infrastructure.
+AppForge now includes a FastAPI dashboard/API, six-role deterministic agent planner, tenant-scoped persistent projects and agent-run records, signed bearer authentication, OpenAI-compatible and Anthropic model adapters, an opt-in Docker code sandbox, plan-only AWS/Azure/GCP adapters, and production approval checks.
 
-## Start locally
+This is an implementation foundation, not yet a production-ready autonomous coding platform. The agent planner still proposes work; model calls are explicit API requests, not autonomous agent loops. PostgreSQL, enterprise SSO/MFA, RBAC, migrations, audit tamper-evidence, and production deployment workflows remain future work.
 
-Requirements: Docker Desktop or Docker Engine with Compose.
+## Run locally
+
+Requirements: Docker Engine/Desktop with Compose.
 
 ```bash
 git clone https://github.com/jason888lane-ui/appforge.git
 cd appforge
+cp .env.example .env
+# Set APP_AUTH_SECRET to a unique random value before sharing the service.
 docker compose up --build
 ```
 
-Open http://localhost:8000 for the dashboard, http://localhost:8000/docs for the API, and http://localhost:8000/health for health status.
+Open http://localhost:8000 for the dashboard and http://localhost:8000/docs for API docs.
 
-Run tests without Docker:
+Without Docker:
 
 ```bash
 python -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"
-pytest
-ruff check backend
+uvicorn app.main:app --app-dir backend --reload
 ```
 
-## Included capabilities
+## Authentication and tenant isolation
 
-- Dashboard for proposing agent runs and cloud deployment plans.
-- Six specialist roles: product, architecture, implementation, QA, security, and infrastructure.
-- AWS, Azure, and Google Cloud deployment-plan previews.
-- Explicit production approval policy checks.
-- Docker-based local API and GitHub Actions CI.
+1. Register a tenant owner with `POST /api/v1/auth/register`.
+2. Use the returned bearer token for protected endpoints.
+3. Create projects with `POST /api/v1/projects`.
+4. Create persisted agent proposals with `POST /api/v1/agent-runs`.
+5. List only the authenticated tenant's projects and runs.
 
-## Safety boundary
+The tenant ID is derived from the signed token, never accepted as a caller-supplied tenant selector. Project access is checked against that tenant. Passwords are PBKDF2-HMAC-SHA256 hashes. The built-in token signer is a minimal first-party baseline; production must use a managed identity provider/enterprise OIDC and a secret manager.
 
-- Agent runs currently generate structured proposals only; they do not execute generated code.
-- Cloud adapters are plan-only. No cloud SDKs, credentials, account changes, or apply operations are included.
-- Production actions require explicit approval by an authorized human.
-- Never commit secrets. Use a managed secret store when provider integrations are added.
+## Model providers
 
-## Next milestones
+Set `OPENAI_API_KEY` or `ANTHROPIC_API_KEY` in the runtime environment. Then call `POST /api/v1/models/complete` with a provider and prompt. Model calls incur provider charges and should be enabled only after setting the relevant key and usage limits. Keys are read from environment variables and are not persisted.
 
-1. Add persistent projects, runs, artifacts, and append-only audit events.
-2. Add authentication, RBAC, tenant isolation, and policy administration.
-3. Integrate model providers and bounded tool use behind an orchestrator.
-4. Add isolated code execution, repository branch/PR workflows, and sandbox quotas.
-5. Implement provider-specific infrastructure previews and approval-bound apply workflows.
-6. Add enterprise observability, billing/usage controls, and production hardening.
+## Isolated code execution
+
+The Docker sandbox is disabled by default. To opt in, set `APP_ENABLE_SANDBOX=true` and ensure the host Docker daemon already has `python:3.12-alpine` available. Sandbox runs use `--pull=never`, no network, read-only filesystem, dropped capabilities, no-new-privileges, memory/CPU/PID limits, a read-only source mount, and a 20-second maximum timeout. This is a defense-in-depth development sandbox, not a substitute for a hardened multi-tenant execution service or dedicated VM isolation.
+
+## Safety boundaries
+
+- Cloud adapters generate previews only. No cloud account is connected and no infrastructure is provisioned.
+- Production deployment/apply remains disabled pending explicit human approval and a future auditable deployment service.
+- Model output is untrusted input; never execute it outside the sandbox.
+- Do not commit API keys, signing secrets, customer code, or production data.
+- SQLite is suitable for local/single-instance development. Use managed PostgreSQL plus schema migrations before multi-instance production use.
+
+## Verification
+
+```bash
+ruff check backend
+pytest -q
+```

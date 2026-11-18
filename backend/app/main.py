@@ -72,6 +72,12 @@ class RegisterRequest(BaseModel):
     password: str = Field(min_length=12, max_length=128)
 
 
+class TeamMemberRequest(BaseModel):
+    email: str = Field(min_length=5, max_length=254)
+    temporary_password: str = Field(min_length=12, max_length=128)
+    role: str = Field(pattern="^(developer|viewer)$")
+
+
 class LoginRequest(BaseModel):
     email: str = Field(min_length=5, max_length=254)
     password: str = Field(min_length=1, max_length=128)
@@ -136,6 +142,26 @@ def login(request: LoginRequest) -> dict[str, str]:
         raise HTTPException(status_code=401, detail="Invalid email or password")
     identity = {"user_id": user["id"], "tenant_id": user["tenant_id"], "email": user["email"], "role": user["role"]}
     return {"access_token": issue_token(identity), "token_type": "bearer"}
+
+
+@app.post("/api/v1/team/members", tags=["team"])
+def add_team_member(
+    request: TeamMemberRequest, principal: Principal = owner_dependency
+) -> dict[str, str]:
+    email = request.email.strip().lower()
+    if "@" not in email or email.startswith("@") or email.endswith("@"):
+        raise HTTPException(status_code=422, detail="A valid email address is required")
+    try:
+        member = store.create_tenant_member(
+            principal.tenant_id, email, hash_password(request.temporary_password), request.role
+        )
+    except IntegrityError as exc:
+        raise HTTPException(status_code=409, detail="An account with that email already exists") from exc
+    store.record_audit(
+        principal.tenant_id, principal.user_id, "team.member_created",
+        member["user_id"], {"role": request.role},
+    )
+    return {"user_id": member["user_id"], "email": member["email"], "role": member["role"]}
 
 
 @app.get("/api/v1/auth/me", tags=["authentication"])

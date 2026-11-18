@@ -15,10 +15,12 @@ from dataclasses import dataclass
 from fastapi import Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
-from app.core import store
-
 bearer = HTTPBearer(auto_error=False)
-_SECRET = os.getenv("APP_AUTH_SECRET", "local-development-only-change-me").encode()
+bearer_dependency = Depends(bearer)
+_secret_value = os.getenv("APP_AUTH_SECRET")
+if os.getenv("APP_ENV", "development").lower() == "production" and not _secret_value:
+    raise RuntimeError("APP_AUTH_SECRET must be set in production")
+_SECRET = (_secret_value or "local-development-only-change-me").encode()
 _TOKEN_TTL = 8 * 60 * 60
 
 
@@ -74,7 +76,7 @@ def decode_token(token: str) -> Principal:
 
 
 def require_principal(
-    credentials: HTTPAuthorizationCredentials | None = Depends(bearer),
+    credentials: HTTPAuthorizationCredentials | None = bearer_dependency,
 ) -> Principal:
     if credentials is None or credentials.scheme.lower() != "bearer":
         raise HTTPException(status_code=401, detail="Bearer authentication required")

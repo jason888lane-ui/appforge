@@ -18,12 +18,28 @@
     textarea{min-height:100px;resize:vertical}button{background:#3456b8;border:0;font-weight:700;cursor:pointer;margin-top:10px}button:hover{background:#456bd8}
     button.secondary{background:#26334d}pre{white-space:pre-wrap;overflow-wrap:anywhere;color:#c7d5ef;background:#0a1324;border-radius:9px;padding:12px;min-height:70px}
     footer{color:var(--muted);font-size:12px;margin:22px 0 40px}.authgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.inline{display:flex;gap:8px;align-items:center}.inline button{width:auto;white-space:nowrap}
+    .tabs{display:flex;gap:8px;flex-wrap:wrap;padding:14px max(24px,5vw);border-bottom:1px solid var(--line);background:#0d1527}
+    .tab{width:auto;margin:0;padding:9px 16px;background:transparent;border:1px solid transparent;color:var(--muted)}
+    .tab[aria-selected="true"]{background:#1b2a49;border-color:#38528a;color:var(--text)}
+    .extension-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:18px}
+    .extension-card{background:linear-gradient(145deg,#17233a,var(--panel));border:1px solid var(--line);border-radius:12px;padding:16px}
+    .extension-card h3{font-size:15px;margin:0 0 6px}.extension-card p{color:var(--muted);font-size:13px;min-height:40px}
+    .extension-meta{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12px;color:var(--muted)}
+    .pill{border:1px solid var(--line);border-radius:20px;padding:3px 9px}
+    .extension-card button{width:auto;padding:8px 12px}
+    .setup-note{border:1px solid #52658a;background:#101a2d;border-radius:10px;padding:14px;color:#c7d5ef;margin-top:16px}
+    @media(max-width:760px){.extension-grid{grid-template-columns:1fr}}
     @media(max-width:760px){.grid,.layout,.authgrid{grid-template-columns:1fr}.agents{grid-template-columns:1fr 1fr}}
   </style>
 </head>
 <body>
 <header><div class="brand">APP<span>FORGE</span></div><div class="status">● Governance mode · production locked</div></header>
+<nav class="tabs" role="tablist" aria-label="AppForge sections">
+  <button class="tab" id="workspaceTab" role="tab" aria-selected="true" aria-controls="workspacePanel">Workspace</button>
+  <button class="tab" id="extensionsTab" role="tab" aria-selected="false" aria-controls="extensionsPanel">Extensions</button>
+</nav>
 <main>
+  <section id="workspacePanel" role="tabpanel" aria-labelledby="workspaceTab">
   <div class="eyebrow">Autonomous development workspace</div>
   <h1>Build with agents. Ship with control.</h1>
   <p class="sub">Manage tenant-isolated projects, create persistent specialist-agent proposals, connect configured model providers, and preview cloud plans. Production deployment remains locked.</p>
@@ -91,11 +107,56 @@
     <h2>Workspace output</h2>
     <pre id="output">Ready. Authenticate to manage tenant-isolated projects and persistent agent proposals.</pre>
   </section>
+  </section>
+  <section id="extensionsPanel" role="tabpanel" aria-labelledby="extensionsTab" hidden>
+    <div class="eyebrow">Integration marketplace</div>
+    <h1>Extensions</h1>
+    <p class="sub">Discover the services AppForge can integrate with. This catalog is a setup guide: connections are not activated until credentials, permissions, and server-side adapters are configured.</p>
+    <div class="setup-note"><strong>Secure by design</strong><br>Extension credentials must be stored server-side in environment secrets or a managed secrets vault. Never paste API keys into this page. Enabling a card here does not connect an external account.</div>
+    <div class="extension-grid">
+      <article class="extension-card"><div class="extension-meta"><span>AI &amp; model providers</span><span class="pill">Provider adapter</span></div><h3>OpenAI</h3><p>Model completions for planning, code review, and agent reasoning through the server-side provider adapter.</p><button type="button" data-extension="OpenAI">View setup</button></article>
+      <article class="extension-card"><div class="extension-meta"><span>AI &amp; model providers</span><span class="pill">Provider adapter</span></div><h3>Anthropic</h3><p>Claude model access for agent reasoning and structured development workflows.</p><button type="button" data-extension="Anthropic">View setup</button></article>
+      <article class="extension-card"><div class="extension-meta"><span>Cloud platforms</span><span class="pill">Plan-only</span></div><h3>Amazon Web Services</h3><p>Generate infrastructure previews and deployment plans. Live provisioning remains disabled pending approval controls.</p><button type="button" data-extension="AWS">View setup</button></article>
+      <article class="extension-card"><div class="extension-meta"><span>Cloud platforms</span><span class="pill">Plan-only</span></div><h3>Microsoft Azure</h3><p>Prepare Azure deployment plans with region and environment configuration.</p><button type="button" data-extension="Azure">View setup</button></article>
+      <article class="extension-card"><div class="extension-meta"><span>Cloud platforms</span><span class="pill">Plan-only</span></div><h3>Google Cloud</h3><p>Prepare Google Cloud deployment plans without provisioning resources.</p><button type="button" data-extension="Google Cloud">View setup</button></article>
+      <article class="extension-card"><div class="extension-meta"><span>Source control</span><span class="pill">Planned adapter</span></div><h3>GitHub</h3><p>Future repository, pull-request, and CI status integration using narrowly scoped repository permissions.</p><button type="button" data-extension="GitHub">View setup</button></article>
+      <article class="extension-card"><div class="extension-meta"><span>Observability</span><span class="pill">Planned adapter</span></div><h3>Monitoring &amp; alerts</h3><p>Future integrations for logs, metrics, tracing, alert routing, and operational health dashboards.</p><button type="button" data-extension="Monitoring">View setup</button></article>
+      <article class="extension-card"><div class="extension-meta"><span>Identity</span><span class="pill">Planned adapter</span></div><h3>Enterprise identity (OIDC)</h3><p>Future single sign-on integration with an external identity provider; MFA policy remains managed by that provider.</p><button type="button" data-extension="OIDC">View setup</button></article>
+    </div>
+    <section class="card" style="margin-top:18px"><h2>Extension setup details</h2><pre id="extensionDetails">Select an extension to see its current integration status and safe setup notes.</pre></section>
+  </section>
   <footer>AppForge implementation foundation · Model calls require configured provider credentials. Sandbox is opt-in and production cloud apply remains disabled.</footer>
 </main>
 <script>
 const output=document.getElementById("output");
 const runs=document.getElementById("runs");
+const workspaceTab=document.getElementById("workspaceTab");
+const extensionsTab=document.getElementById("extensionsTab");
+const workspacePanel=document.getElementById("workspacePanel");
+const extensionsPanel=document.getElementById("extensionsPanel");
+function selectTab(name){
+  const extensions=name==="extensions";
+  workspacePanel.hidden=extensions;
+  extensionsPanel.hidden=!extensions;
+  workspaceTab.setAttribute("aria-selected",String(!extensions));
+  extensionsTab.setAttribute("aria-selected",String(extensions));
+}
+workspaceTab.addEventListener("click",()=>selectTab("workspace"));
+extensionsTab.addEventListener("click",()=>selectTab("extensions"));
+const extensionNotes={
+  "OpenAI":"Status: provider adapter is supported by the backend. Configure OPENAI_API_KEY and the model setting in the server environment. Restart the API after updating secrets. Do not expose the key to the browser.",
+  "Anthropic":"Status: provider adapter is supported by the backend. Configure ANTHROPIC_API_KEY and the model setting in the server environment. Restart the API after updating secrets. Do not expose the key to the browser.",
+  "AWS":"Status: plan-only adapter. Cloud account credentials and live provisioning are not connected through this catalog. Any future apply operation must use least-privilege roles and explicit human approval.",
+  "Azure":"Status: plan-only adapter. No Azure resources are provisioned. A future live adapter must use workload identity and explicit human approval.",
+  "Google Cloud":"Status: plan-only adapter. No Google Cloud resources are provisioned. A future live adapter must use workload identity and explicit human approval.",
+  "GitHub":"Status: planned. Repository and pull-request operations are not yet connected in the AppForge application. Use a GitHub App with least-privilege repository permissions when implemented.",
+  "Monitoring":"Status: planned. No external monitoring account is connected. Configure a server-side telemetry adapter before routing logs or alerts.",
+  "OIDC":"Status: planned. Current sign-in uses AppForge's local email/password flow. Enterprise SSO and MFA enforcement are not yet implemented; MFA should be enforced by the chosen identity provider."
+};
+document.querySelectorAll("[data-extension]").forEach(button=>button.addEventListener("click",()=>{
+  const name=button.dataset.extension;
+  document.getElementById("extensionDetails").textContent=extensionNotes[name]||"No setup information available.";
+}));
 let token=sessionStorage.getItem("appforge_token")||"";
 const headers=()=>token?{"Authorization":"Bearer "+token,"Content-Type":"application/json"}:{"Content-Type":"application/json"};
 async function api(path,options={}){

@@ -33,7 +33,7 @@ def test_health_check():
 def test_dashboard_is_served():
     response = client.get("/")
     assert response.status_code == 200
-    assert "APPFORGE" in response.text
+    assert "APP<span>FORGE</span>" in response.text
 
 
 def test_plan_is_draft_and_never_executes():

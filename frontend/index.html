@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AppForge · Control Center</title>
+  <style>
+    :root{color-scheme:dark;--bg:#0b1020;--panel:#131b2e;--line:#26334d;--muted:#91a0ba;--text:#edf3ff;--accent:#7c9cff;--green:#65d6a5}
+    *{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 15% 0%,#17264a 0,transparent 35%),var(--bg);color:var(--text);font:15px/1.5 Inter,ui-sans-serif,system-ui,sans-serif}
+    header{display:flex;justify-content:space-between;align-items:center;padding:22px max(24px,5vw);border-bottom:1px solid var(--line)}
+    .brand{font-size:20px;font-weight:750;letter-spacing:.04em}.brand span{color:var(--accent)}.status{color:var(--green);font-size:13px}
+    main{max-width:1120px;margin:36px auto;padding:0 24px}.eyebrow{color:var(--accent);text-transform:uppercase;letter-spacing:.15em;font-size:11px;font-weight:700}
+    h1{font-size:clamp(28px,4vw,42px);margin:8px 0}.sub{color:var(--muted);max-width:720px}
+    .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:28px 0}.card{background:linear-gradient(145deg,#17233a,var(--panel));border:1px solid var(--line);border-radius:14px;padding:18px}
+    .card small{color:var(--muted)}.metric{font-size:26px;font-weight:700;margin-top:8px}.layout{display:grid;grid-template-columns:1.2fr .8fr;gap:16px}
+    h2{font-size:17px;margin:0 0 14px}.agents{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.agent{padding:12px;border:1px solid var(--line);border-radius:10px;background:#101a2d}.agent b{display:block}.agent small{color:var(--muted)}
+    textarea,select,button{width:100%;border-radius:9px;border:1px solid var(--line);background:#0c1527;color:var(--text);padding:12px;font:inherit}textarea{min-height:100px;resize:vertical}
+    button{background:#3456b8;border:0;font-weight:700;cursor:pointer;margin-top:10px}button:hover{background:#456bd8}
+    pre{white-space:pre-wrap;overflow-wrap:anywhere;color:#c7d5ef;background:#0a1324;border-radius:9px;padding:12px;min-height:70px}
+    footer{color:var(--muted);font-size:12px;margin:22px 0 40px}
+    @media(max-width:760px){.grid,.layout{grid-template-columns:1fr}.agents{grid-template-columns:1fr 1fr}}
+  </style>
+</head>
+<body>
+<header><div class="brand">APP<span>FORGE</span></div><div class="status">● Governance mode · production locked</div></header>
+<main>
+  <div class="eyebrow">Autonomous development workspace</div>
+  <h1>Build with agents. Ship with control.</h1>
+  <p class="sub">Coordinate specialist development roles, review proposed work, and prepare cloud deployment plans. Production execution remains disabled until a future approval-gated release.</p>
+  <section class="grid">
+    <div class="card"><small>Specialist roles</small><div class="metric">06</div><small>Product · Architecture · Build · QA · Security · Cloud</small></div>
+    <div class="card"><small>Cloud targets</small><div class="metric">03</div><small>AWS · Microsoft Azure · Google Cloud</small></div>
+    <div class="card"><small>Production execution</small><div class="metric" style="color:var(--green)">Locked</div><small>Human approval required</small></div>
+  </section>
+  <section class="layout">
+    <div class="card">
+      <h2>Agent team</h2>
+      <div class="agents">
+        <div class="agent"><b>Product agent</b><small>Acceptance criteria</small></div>
+        <div class="agent"><b>Architect agent</b><small>System design</small></div>
+        <div class="agent"><b>Implementation agent</b><small>Code proposals</small></div>
+        <div class="agent"><b>QA agent</b><small>Test strategy</small></div>
+        <div class="agent"><b>Security agent</b><small>Risk review</small></div>
+        <div class="agent"><b>Cloud agent</b><small>Infrastructure plans</small></div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Create an agent run</h2>
+      <label for="goal">Development objective</label>
+      <textarea id="goal" minlength="8">Build a secure customer portal with automated tests</textarea>
+      <button id="plan">Generate team plan</button>
+      <h2 style="margin-top:18px">Cloud deployment planner</h2>
+      <label for="provider">Provider</label>
+      <select id="provider"><option value="aws">AWS</option><option value="azure">Microsoft Azure</option><option value="gcp">Google Cloud</option></select>
+      <label for="region">Region</label>
+      <input id="region" value="us-east-1" style="width:100%;margin-top:8px;border-radius:9px;border:1px solid var(--line);background:#0c1527;color:var(--text);padding:12px">
+      <button id="cloud">Generate plan only</button>
+    </div>
+  </section>
+  <section class="card" style="margin-top:16px">
+    <h2>Workspace output</h2>
+    <pre id="output">Ready. Plans are proposals only; no code or cloud resources will be executed.</pre>
+  </section>
+  <footer>AppForge foundation UI · Do not enter credentials here. Provider integrations and authenticated approval workflows are not yet enabled.</footer>
+</main>
+<script>
+const output=document.getElementById("output");
+document.getElementById("plan").addEventListener("click",async()=>{
+  const goal=document.getElementById("goal").value;
+  output.textContent="Creating agent proposal…";
+  try{const r=await fetch("/api/v1/agents/runs",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({goal})});const data=await r.json();if(!r.ok)throw new Error(data.detail||"Request failed");output.textContent=JSON.stringify(data,null,2)}
+  catch(e){output.textContent="Could not create plan: "+e.message}
+});
+document.getElementById("cloud").addEventListener("click",async()=>{
+  const provider=document.getElementById("provider").value;
+  const region=document.getElementById("region").value;
+  output.textContent="Preparing cloud plan…";
+  try{const r=await fetch("/api/v1/cloud/plan",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({provider,environment:"staging",region})});const data=await r.json();if(!r.ok)throw new Error(data.detail||"Request failed");output.textContent=JSON.stringify(data,null,2)}
+  catch(e){output.textContent="Could not create plan: "+e.message}
+});
+</script>
+</body>
+</html>

@@ -3,8 +3,8 @@ from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.responses import FileResponse
-from sqlalchemy.exc import IntegrityError
 from pydantic import BaseModel, Field
+from sqlalchemy.exc import IntegrityError
 
 from app.agents.orchestrator import AgentOrchestrator
 from app.cloud.adapters import CloudProvider, create_deployment_plan
@@ -148,18 +148,18 @@ def who_am_i(principal: Principal = member_dependency) -> dict[str, str]:
 
 @app.post("/api/v1/projects", tags=["projects"])
 def create_project(
-    request: ProjectRequest, principal: Principal = principal_dependency
+    request: ProjectRequest, principal: Principal = editor_dependency
 ) -> dict[str, object]:
     return store.create_project(principal.tenant_id, request.name, request.description)
 
 
 @app.get("/api/v1/projects", tags=["projects"])
-def get_projects(principal: Principal = principal_dependency) -> list[dict[str, object]]:
+def get_projects(principal: Principal = member_dependency) -> list[dict[str, object]]:
     return store.list_projects(principal.tenant_id)
 
 
 @app.get("/api/v1/runs", tags=["agents"])
-def get_runs(principal: Principal = principal_dependency) -> list[dict[str, object]]:
+def get_runs(principal: Principal = member_dependency) -> list[dict[str, object]]:
     return store.list_agent_runs(principal.tenant_id)
 
 

@@ -15,6 +15,8 @@ from dataclasses import dataclass
 from fastapi import Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
+from app.core import store
+
 bearer = HTTPBearer(auto_error=False)
 bearer_dependency = Depends(bearer)
 _secret_value = os.getenv("APP_AUTH_SECRET")
@@ -89,4 +91,11 @@ def require_principal(
 ) -> Principal:
     if credentials is None or credentials.scheme.lower() != "bearer":
         raise HTTPException(status_code=401, detail="Bearer authentication required")
-    return decode_token(credentials.credentials)
+    principal = decode_token(credentials.credentials)
+    user = store.get_user_by_id(principal.user_id)
+    if user is None or user["tenant_id"] != principal.tenant_id or user["email"] != principal.email:
+        raise HTTPException(status_code=401, detail="Account is no longer active")
+    return Principal(
+        user_id=principal.user_id, tenant_id=principal.tenant_id,
+        email=principal.email, role=user["role"],
+    )

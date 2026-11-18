@@ -4,7 +4,7 @@ Enterprise autonomous software-development platform. AppForge is independent and
 
 ## Current status
 
-**Foundation stage.** This repository provides a containerized FastAPI service, an explicit production-approval policy, automated tests, and CI. It is not yet a complete autonomous coding platform and does not deploy cloud resources.
+**Early implementation.** The repository includes a FastAPI service, browser dashboard, six-role deterministic agent planner, plan-only adapters for AWS/Azure/Google Cloud, a production-approval policy, automated tests, and GitHub Actions CI. This is not yet a production-ready autonomous coding platform: agents do not call LLMs, execute code, or deploy infrastructure.
 
 ## Start locally
 
@@ -16,7 +16,7 @@ cd appforge
 docker compose up --build
 ```
 
-API: http://localhost:8000 · OpenAPI: http://localhost:8000/docs · Health: http://localhost:8000/health
+Open http://localhost:8000 for the dashboard, http://localhost:8000/docs for the API, and http://localhost:8000/health for health status.
 
 Run tests without Docker:
 
@@ -25,23 +25,29 @@ python -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"
 pytest
+ruff check backend
 ```
+
+## Included capabilities
+
+- Dashboard for proposing agent runs and cloud deployment plans.
+- Six specialist roles: product, architecture, implementation, QA, security, and infrastructure.
+- AWS, Azure, and Google Cloud deployment-plan previews.
+- Explicit production approval policy checks.
+- Docker-based local API and GitHub Actions CI.
 
 ## Safety boundary
 
-- Planning and validation are separate from execution.
+- Agent runs currently generate structured proposals only; they do not execute generated code.
+- Cloud adapters are plan-only. No cloud SDKs, credentials, account changes, or apply operations are included.
 - Production actions require explicit approval by an authorized human.
-- No production deployment endpoint or cloud credentials are included in this foundation.
 - Never commit secrets. Use a managed secret store when provider integrations are added.
-- Cloud adapters must default to plan-only behavior until explicitly enabled.
 
-## Planned milestones
+## Next milestones
 
-1. API, Docker development environment, CI, and safety policy.
-2. Persistent projects, jobs, audit events, and tenant-scoped authorization.
-3. Agent orchestration with bounded tools, budgets, and sandboxed workspaces.
-4. GitHub branch/PR workflows and isolated code execution.
-5. Multi-cloud plan adapters (AWS, Azure, Google Cloud) with approval-gated apply.
-6. Enterprise identity, policy administration, observability, and operational hardening.
-
-See [docs/architecture.md](docs/architecture.md) and [docs/security.md](docs/security.md).
+1. Add persistent projects, runs, artifacts, and append-only audit events.
+2. Add authentication, RBAC, tenant isolation, and policy administration.
+3. Integrate model providers and bounded tool use behind an orchestrator.
+4. Add isolated code execution, repository branch/PR workflows, and sandbox quotas.
+5. Implement provider-specific infrastructure previews and approval-bound apply workflows.
+6. Add enterprise observability, billing/usage controls, and production hardening.

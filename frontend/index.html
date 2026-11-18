@@ -14,11 +14,11 @@
     .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:28px 0}.card{background:linear-gradient(145deg,#17233a,var(--panel));border:1px solid var(--line);border-radius:14px;padding:18px}
     .card small{color:var(--muted)}.metric{font-size:26px;font-weight:700;margin-top:8px}.layout{display:grid;grid-template-columns:1.2fr .8fr;gap:16px}
     h2{font-size:17px;margin:0 0 14px}.agents{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.agent{padding:12px;border:1px solid var(--line);border-radius:10px;background:#101a2d}.agent b{display:block}.agent small{color:var(--muted)}
-    textarea,select,button{width:100%;border-radius:9px;border:1px solid var(--line);background:#0c1527;color:var(--text);padding:12px;font:inherit}textarea{min-height:100px;resize:vertical}
-    button{background:#3456b8;border:0;font-weight:700;cursor:pointer;margin-top:10px}button:hover{background:#456bd8}
-    pre{white-space:pre-wrap;overflow-wrap:anywhere;color:#c7d5ef;background:#0a1324;border-radius:9px;padding:12px;min-height:70px}
-    footer{color:var(--muted);font-size:12px;margin:22px 0 40px}
-    @media(max-width:760px){.grid,.layout{grid-template-columns:1fr}.agents{grid-template-columns:1fr 1fr}}
+    textarea,select,input,button{width:100%;border-radius:9px;border:1px solid var(--line);background:#0c1527;color:var(--text);padding:12px;font:inherit;margin:5px 0 10px}
+    textarea{min-height:100px;resize:vertical}button{background:#3456b8;border:0;font-weight:700;cursor:pointer;margin-top:10px}button:hover{background:#456bd8}
+    button.secondary{background:#26334d}pre{white-space:pre-wrap;overflow-wrap:anywhere;color:#c7d5ef;background:#0a1324;border-radius:9px;padding:12px;min-height:70px}
+    footer{color:var(--muted);font-size:12px;margin:22px 0 40px}.authgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.inline{display:flex;gap:8px;align-items:center}.inline button{width:auto;white-space:nowrap}
+    @media(max-width:760px){.grid,.layout,.authgrid{grid-template-columns:1fr}.agents{grid-template-columns:1fr 1fr}}
   </style>
 </head>
 <body>
@@ -26,13 +26,24 @@
 <main>
   <div class="eyebrow">Autonomous development workspace</div>
   <h1>Build with agents. Ship with control.</h1>
-  <p class="sub">Coordinate specialist development roles, review proposed work, and prepare cloud deployment plans. Production execution remains disabled until a future approval-gated release.</p>
+  <p class="sub">Manage tenant-isolated projects, create persistent specialist-agent proposals, connect configured model providers, and preview cloud plans. Production deployment remains locked.</p>
   <section class="grid">
     <div class="card"><small>Specialist roles</small><div class="metric">06</div><small>Product · Architecture · Build · QA · Security · Cloud</small></div>
     <div class="card"><small>Cloud targets</small><div class="metric">03</div><small>AWS · Microsoft Azure · Google Cloud</small></div>
     <div class="card"><small>Production execution</small><div class="metric" style="color:var(--green)">Locked</div><small>Human approval required</small></div>
   </section>
-  <section class="layout">
+  <section class="card">
+    <h2>Tenant sign-in</h2>
+    <div class="authgrid">
+      <div><label for="tenant">New tenant name (registration)</label><input id="tenant" placeholder="Company or workspace name">
+        <label for="email">Email</label><input id="email" type="email" autocomplete="username" placeholder="you@company.com">
+        <label for="password">Password (12+ characters)</label><input id="password" type="password" autocomplete="current-password" placeholder="Password">
+        <div class="inline"><button id="register">Create tenant</button><button id="login" class="secondary">Sign in</button></div>
+      </div>
+      <div><p id="identity">Not signed in. Create a tenant or sign in to access private projects and saved agent runs.</p><button id="logout" class="secondary">Sign out</button></div>
+    </div>
+  </section>
+  <section class="layout" style="margin-top:16px">
     <div class="card">
       <h2>Agent team</h2>
       <div class="agents">
@@ -45,39 +56,102 @@
       </div>
     </div>
     <div class="card">
-      <h2>Create an agent run</h2>
+      <h2>Project workspace</h2>
+      <label for="projectName">New project</label><input id="projectName" placeholder="Project name">
+      <button id="createProject">Create project</button>
+      <label for="projectSelect">Active project</label><select id="projectSelect"><option value="">Sign in to load projects</option></select>
       <label for="goal">Development objective</label>
-      <textarea id="goal" minlength="8">Build a secure customer portal with automated tests</textarea>
-      <button id="plan">Generate team plan</button>
-      <h2 style="margin-top:18px">Cloud deployment planner</h2>
+      <textarea id="goal">Build a secure customer portal with automated tests</textarea>
+      <button id="plan">Save six-agent proposal</button>
+    </div>
+  </section>
+  <section class="layout" style="margin-top:16px">
+    <div class="card">
+      <h2>Model provider</h2>
+      <label for="modelProvider">Provider (server key required)</label>
+      <select id="modelProvider"><option value="openai">OpenAI</option><option value="anthropic">Anthropic</option></select>
+      <label for="prompt">Prompt</label><textarea id="prompt" placeholder="Ask the configured model to analyze a requirement…"></textarea>
+      <button id="complete">Send model request</button>
+      <small>API keys remain on the server in environment variables. Model usage may incur charges.</small>
+    </div>
+    <div class="card">
+      <h2>Cloud deployment planner</h2>
       <label for="provider">Provider</label>
       <select id="provider"><option value="aws">AWS</option><option value="azure">Microsoft Azure</option><option value="gcp">Google Cloud</option></select>
-      <label for="region">Region</label>
-      <input id="region" value="us-east-1" style="width:100%;margin-top:8px;border-radius:9px;border:1px solid var(--line);background:#0c1527;color:var(--text);padding:12px">
+      <label for="region">Region</label><input id="region" value="us-east-1">
       <button id="cloud">Generate plan only</button>
+      <small>Preview only. No cloud account access or provisioning.</small>
     </div>
   </section>
   <section class="card" style="margin-top:16px">
-    <h2>Workspace output</h2>
-    <pre id="output">Ready. Plans are proposals only; no code or cloud resources will be executed.</pre>
+    <div class="inline"><h2 style="margin:0">Saved agent runs</h2><button id="refresh" class="secondary">Refresh</button></div>
+    <pre id="runs">Sign in to view this tenant's saved runs.</pre>
   </section>
-  <footer>AppForge foundation UI · Do not enter credentials here. Provider integrations and authenticated approval workflows are not yet enabled.</footer>
+  <section class="card" style="margin-top:16px">
+    <h2>Workspace output</h2>
+    <pre id="output">Ready. Authenticate to manage tenant-isolated projects and persistent agent proposals.</pre>
+  </section>
+  <footer>AppForge implementation foundation · Model calls require configured provider credentials. Sandbox is opt-in and production cloud apply remains disabled.</footer>
 </main>
 <script>
 const output=document.getElementById("output");
+const runs=document.getElementById("runs");
+let token=sessionStorage.getItem("appforge_token")||"";
+const headers=()=>token?{"Authorization":"Bearer "+token,"Content-Type":"application/json"}:{"Content-Type":"application/json"};
+async function api(path,options={}){
+  const response=await fetch(path,{...options,headers:{...headers(),...(options.headers||{})}});
+  const data=await response.json().catch(()=>({detail:"Unexpected server response"}));
+  if(!response.ok)throw new Error(data.detail||"Request failed ("+response.status+")");
+  return data;
+}
+function show(value){output.textContent=typeof value==="string"?value:JSON.stringify(value,null,2)}
+async function loadWorkspace(){
+  if(!token){document.getElementById("identity").textContent="Not signed in.";return}
+  try{
+    const me=await api("/api/v1/auth/me");
+    document.getElementById("identity").textContent="Signed in: "+me.email+" · Tenant "+me.tenant_id;
+    const projects=await api("/api/v1/projects");
+    const select=document.getElementById("projectSelect");
+    select.innerHTML="";
+    projects.forEach(p=>{const o=document.createElement("option");o.value=p.id;o.textContent=p.name;select.appendChild(o)});
+    if(!projects.length){const o=document.createElement("option");o.value="";o.textContent="Create a project to get started";select.appendChild(o)}
+    await loadRuns();
+  }catch(e){token="";sessionStorage.removeItem("appforge_token");show("Session expired: "+e.message)}
+}
+async function loadRuns(){try{runs.textContent=JSON.stringify(await api("/api/v1/runs"),null,2)}catch(e){runs.textContent=e.message}}
+document.getElementById("register").addEventListener("click",async()=>{
+  try{
+    const data=await api("/api/v1/auth/register",{method:"POST",body:JSON.stringify({tenant_name:document.getElementById("tenant").value,email:document.getElementById("email").value,password:document.getElementById("password").value})});
+    token=data.access_token;sessionStorage.setItem("appforge_token",token);await loadWorkspace();show("Tenant created and signed in.");
+  }catch(e){show("Registration failed: "+e.message)}
+});
+document.getElementById("login").addEventListener("click",async()=>{
+  try{
+    const data=await api("/api/v1/auth/login",{method:"POST",body:JSON.stringify({email:document.getElementById("email").value,password:document.getElementById("password").value})});
+    token=data.access_token;sessionStorage.setItem("appforge_token",token);await loadWorkspace();show("Signed in successfully.");
+  }catch(e){show("Sign-in failed: "+e.message)}
+});
+document.getElementById("logout").addEventListener("click",()=>{token="";sessionStorage.removeItem("appforge_token");document.getElementById("identity").textContent="Signed out.";runs.textContent="Sign in to view saved runs.";show("Signed out.")});
+document.getElementById("createProject").addEventListener("click",async()=>{
+  try{const p=await api("/api/v1/projects",{method:"POST",body:JSON.stringify({name:document.getElementById("projectName").value})});await loadWorkspace();show(p)}
+  catch(e){show("Project creation failed: "+e.message)}
+});
 document.getElementById("plan").addEventListener("click",async()=>{
-  const goal=document.getElementById("goal").value;
-  output.textContent="Creating agent proposal…";
-  try{const r=await fetch("/api/v1/agents/runs",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({goal})});const data=await r.json();if(!r.ok)throw new Error(data.detail||"Request failed");output.textContent=JSON.stringify(data,null,2)}
-  catch(e){output.textContent="Could not create plan: "+e.message}
+  try{
+    const data=await api("/api/v1/agent-runs",{method:"POST",body:JSON.stringify({goal:document.getElementById("goal").value,project_id:document.getElementById("projectSelect").value||null})});
+    await loadRuns();show(data);
+  }catch(e){show("Could not save agent proposal: "+e.message)}
+});
+document.getElementById("refresh").addEventListener("click",loadRuns);
+document.getElementById("complete").addEventListener("click",async()=>{
+  try{const data=await api("/api/v1/models/complete",{method:"POST",body:JSON.stringify({provider:document.getElementById("modelProvider").value,prompt:document.getElementById("prompt").value})});show(data)}
+  catch(e){show("Model request failed: "+e.message)}
 });
 document.getElementById("cloud").addEventListener("click",async()=>{
-  const provider=document.getElementById("provider").value;
-  const region=document.getElementById("region").value;
-  output.textContent="Preparing cloud plan…";
-  try{const r=await fetch("/api/v1/cloud/plan",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({provider,environment:"staging",region})});const data=await r.json();if(!r.ok)throw new Error(data.detail||"Request failed");output.textContent=JSON.stringify(data,null,2)}
-  catch(e){output.textContent="Could not create plan: "+e.message}
+  try{const data=await api("/api/v1/cloud/plan",{method:"POST",body:JSON.stringify({provider:document.getElementById("provider").value,environment:"staging",region:document.getElementById("region").value})});show(data)}
+  catch(e){show("Could not create cloud plan: "+e.message)}
 });
+loadWorkspace();
 </script>
 </body>
 </html>

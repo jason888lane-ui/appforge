@@ -10,11 +10,17 @@ services:
       APP_ENV: ${APP_ENV:-development}
       APP_NAME: ${APP_NAME:-AppForge}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      APP_DATABASE_PATH: /data/appforge.db
     ports:
       - "8000:8000"
+    volumes:
+      - appforge_data:/data
     read_only: true
     tmpfs:
       - /tmp
     security_opt:
       - no-new-privileges:true
     restart: unless-stopped
+
+volumes:
+  appforge_data:

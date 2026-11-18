@@ -29,6 +29,7 @@ class Principal:
     user_id: str
     tenant_id: str
     email: str
+    role: str
 
 
 def hash_password(password: str) -> str:
@@ -50,7 +51,7 @@ def verify_password(password: str, encoded: str) -> bool:
 def issue_token(user: dict[str, str]) -> str:
     payload = {
         "sub": user["user_id"], "tenant": user["tenant_id"],
-        "email": user["email"], "exp": int(time.time()) + _TOKEN_TTL,
+        "email": user["email"], "role": user.get("role", "developer"), "exp": int(time.time()) + _TOKEN_TTL,
     }
     body = base64.urlsafe_b64encode(json.dumps(payload, separators=(",", ":")).encode()).rstrip(b"=")
     signature = hmac.new(_SECRET, body, hashlib.sha256).digest()
@@ -69,10 +70,18 @@ def decode_token(token: str) -> Principal:
         if int(payload["exp"]) <= int(time.time()):
             raise ValueError("expired")
         return Principal(
-            user_id=str(payload["sub"]), tenant_id=str(payload["tenant"]), email=str(payload["email"])
+            user_id=str(payload["sub"]), tenant_id=str(payload["tenant"]), email=str(payload["email"]), role=str(payload.get("role", "developer"))
         )
     except (ValueError, KeyError, TypeError, json.JSONDecodeError) as exc:
         raise HTTPException(status_code=401, detail="Invalid or expired bearer token") from exc
+
+
+def require_roles(*allowed_roles: str):
+    def dependency(principal: Principal = Depends(require_principal)) -> Principal:
+        if principal.role not in allowed_roles:
+            raise HTTPException(status_code=403, detail="Insufficient workspace role")
+        return principal
+    return dependency
 
 
 def require_principal(

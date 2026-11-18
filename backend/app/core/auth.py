@@ -78,8 +78,11 @@ def decode_token(token: str) -> Principal:
         raise HTTPException(status_code=401, detail="Invalid or expired bearer token") from exc
 
 
+principal_dependency = Depends(require_principal)
+
+
 def require_roles(*allowed_roles: str):
-    def dependency(principal: Principal = Depends(require_principal)) -> Principal:
+    def dependency(principal: Principal = principal_dependency) -> Principal:
         if principal.role not in allowed_roles:
             raise HTTPException(status_code=403, detail="Insufficient workspace role")
         return principal

@@ -1,9 +1,9 @@
 """AppForge API: tenant-aware project storage and guarded AI/sandbox services."""
-import sqlite3
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.responses import FileResponse
+from sqlalchemy.exc import IntegrityError
 from pydantic import BaseModel, Field
 
 from app.agents.orchestrator import AgentOrchestrator
@@ -15,6 +15,7 @@ from app.core.auth import (
     hash_password,
     issue_token,
     require_principal,
+    require_roles,
     verify_password,
 )
 from app.providers.models import ModelProviderError, configured_provider
@@ -28,7 +29,9 @@ app = FastAPI(
 orchestrator = AgentOrchestrator()
 DASHBOARD = Path(__file__).resolve().parents[2] / "frontend" / "index.html"
 store.initialize_store()
-principal_dependency = Depends(require_principal)
+owner_dependency = Depends(require_roles("owner"))
+editor_dependency = Depends(require_roles("owner", "developer"))
+member_dependency = Depends(require_roles("owner", "developer", "viewer"))
 
 
 class PlanRequest(BaseModel):
@@ -121,7 +124,7 @@ def register(request: RegisterRequest) -> dict[str, str]:
         user = store.create_tenant_user(
             request.tenant_name.strip(), email, hash_password(request.password)
         )
-    except sqlite3.IntegrityError as exc:
+    except IntegrityError as exc:
         raise HTTPException(status_code=409, detail="An account with that email already exists") from exc
     return {"access_token": issue_token(user), "token_type": "bearer", "tenant_id": user["tenant_id"]}
 
@@ -131,15 +134,15 @@ def login(request: LoginRequest) -> dict[str, str]:
     user = store.get_user_by_email(request.email.strip().lower())
     if user is None or not verify_password(request.password, user["password_hash"]):
         raise HTTPException(status_code=401, detail="Invalid email or password")
-    identity = {"user_id": user["id"], "tenant_id": user["tenant_id"], "email": user["email"]}
+    identity = {"user_id": user["id"], "tenant_id": user["tenant_id"], "email": user["email"], "role": user["role"]}
     return {"access_token": issue_token(identity), "token_type": "bearer"}
 
 
 @app.get("/api/v1/auth/me", tags=["authentication"])
-def who_am_i(principal: Principal = principal_dependency) -> dict[str, str]:
+def who_am_i(principal: Principal = member_dependency) -> dict[str, str]:
     return {
         "user_id": principal.user_id, "tenant_id": principal.tenant_id,
-        "email": principal.email,
+        "email": principal.email, "role": principal.role,
     }
 
 

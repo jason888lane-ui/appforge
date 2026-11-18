@@ -1,4 +1,19 @@
 services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: appforge
+      POSTGRES_USER: appforge
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-appforge-local-dev-only}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U appforge -d appforge"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
   api:
     build:
       context: .
@@ -10,11 +25,12 @@ services:
       APP_ENV: ${APP_ENV:-development}
       APP_NAME: ${APP_NAME:-AppForge}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
-      APP_DATABASE_PATH: /data/appforge.db
+      DATABASE_URL: postgresql+psycopg://appforge:${POSTGRES_PASSWORD:-appforge-local-dev-only}@db:5432/appforge
+    depends_on:
+      db:
+        condition: service_healthy
     ports:
       - "8000:8000"
-    volumes:
-      - appforge_data:/data
     read_only: true
     tmpfs:
       - /tmp
@@ -23,4 +39,4 @@ services:
     restart: unless-stopped
 
 volumes:
-  appforge_data:
+  postgres_data:

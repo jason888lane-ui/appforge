@@ -136,7 +136,7 @@ def login(request: LoginRequest) -> dict[str, str]:
 
 
 @app.get("/api/v1/auth/me", tags=["authentication"])
-def who_am_i(principal: Principal = Depends(require_principal)) -> dict[str, str]:
+def who_am_i(principal: Principal = principal_dependency) -> dict[str, str]:
     return {
         "user_id": principal.user_id, "tenant_id": principal.tenant_id,
         "email": principal.email,
@@ -145,24 +145,24 @@ def who_am_i(principal: Principal = Depends(require_principal)) -> dict[str, str
 
 @app.post("/api/v1/projects", tags=["projects"])
 def create_project(
-    request: ProjectRequest, principal: Principal = Depends(require_principal)
+    request: ProjectRequest, principal: Principal = principal_dependency
 ) -> dict[str, object]:
     return store.create_project(principal.tenant_id, request.name, request.description)
 
 
 @app.get("/api/v1/projects", tags=["projects"])
-def get_projects(principal: Principal = Depends(require_principal)) -> list[dict[str, object]]:
+def get_projects(principal: Principal = principal_dependency) -> list[dict[str, object]]:
     return store.list_projects(principal.tenant_id)
 
 
 @app.get("/api/v1/runs", tags=["agents"])
-def get_runs(principal: Principal = Depends(require_principal)) -> list[dict[str, object]]:
+def get_runs(principal: Principal = principal_dependency) -> list[dict[str, object]]:
     return store.list_agent_runs(principal.tenant_id)
 
 
 @app.post("/api/v1/agent-runs", tags=["agents"])
 def create_persistent_agent_run(
-    request: AgentRunRequest, principal: Principal = Depends(require_principal)
+    request: AgentRunRequest, principal: Principal = principal_dependency
 ) -> dict[str, object]:
     if request.project_id and not store.project_belongs_to_tenant(
         request.project_id, principal.tenant_id
@@ -182,7 +182,7 @@ def create_persistent_agent_run(
 
 @app.post("/api/v1/models/complete", tags=["models"])
 async def complete_with_model(
-    request: ModelRequest, principal: Principal = Depends(require_principal)
+    request: ModelRequest, principal: Principal = principal_dependency
 ) -> dict[str, str]:
     try:
         answer = await configured_provider(request.provider).complete(request.prompt)
@@ -197,7 +197,7 @@ async def complete_with_model(
 
 @app.post("/api/v1/sandbox/execute", tags=["sandbox"])
 def run_in_sandbox(
-    request: SandboxRequest, principal: Principal = Depends(require_principal)
+    request: SandboxRequest, principal: Principal = principal_dependency
 ) -> dict[str, object]:
     if not store.project_belongs_to_tenant(request.project_id, principal.tenant_id):
         raise HTTPException(status_code=404, detail="Project not found")

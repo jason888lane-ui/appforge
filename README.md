@@ -6,7 +6,7 @@ Enterprise autonomous software-development platform. AppForge is an independent 
 
 AppForge now includes a FastAPI dashboard/API, six-role deterministic agent planner, tenant-scoped persistent projects and agent-run records, signed bearer authentication, OpenAI-compatible and Anthropic model adapters, an opt-in Docker code sandbox, plan-only AWS/Azure/GCP adapters, and production approval checks.
 
-This is an implementation foundation, not yet a production-ready autonomous coding platform. The agent planner still proposes work; model calls are explicit API requests, not autonomous agent loops. PostgreSQL, enterprise SSO/MFA, RBAC, migrations, audit tamper-evidence, and production deployment workflows remain future work.
+This is an implementation foundation, not yet a production-ready autonomous coding platform. The agent planner still proposes work; model calls are explicit API requests, not autonomous agent loops. The API persistence layer now supports SQLite for direct local runs and PostgreSQL through SQLAlchemy. Workspace roles are owner, developer, and viewer; role checks are enforced server-side. Enterprise OIDC/SSO, MFA, managed database migrations, audit tamper-evidence, durable background queues, and production deployment workflows remain future work.
 
 ## Run locally
 
@@ -37,7 +37,10 @@ uvicorn app.main:app --app-dir backend --reload
 2. Use the returned bearer token for protected endpoints.
 3. Create projects with `POST /api/v1/projects`.
 4. Create persisted agent proposals with `POST /api/v1/agent-runs`.
-5. List only the authenticated tenant's projects and runs.
+5. Add tenant team members as an owner with `POST /api/v1/team/members` and assign `developer` or `viewer`.
+6. List only the authenticated tenant's projects and runs.
+
+Role matrix: owners can administer the team and use all current workspace APIs; developers can create projects and agent proposals and use configured model calls; viewers can read workspace projects and runs. Sandbox execution is owner-only. Role changes are read from the database on each authenticated request so permission changes take effect without waiting for token expiry.
 
 The tenant ID is derived from the signed token, never accepted as a caller-supplied tenant selector. Project access is checked against that tenant. Passwords are PBKDF2-HMAC-SHA256 hashes. The built-in token signer is a minimal first-party baseline; production must use a managed identity provider/enterprise OIDC and a secret manager.
 
@@ -57,7 +60,7 @@ The sandbox runner is intentionally not connected to the API container's host Do
 - Production deployment/apply remains disabled pending explicit human approval and a future auditable deployment service.
 - Model output is untrusted input; never execute it outside the sandbox.
 - Do not commit API keys, signing secrets, customer code, or production data.
-- SQLite is suitable for local/single-instance development. Use managed PostgreSQL plus schema migrations before multi-instance production use.
+- Direct local API runs use SQLite by default. Docker Compose starts a local PostgreSQL 16 service and persists its data in a named volume. The current schema initializer is a bootstrap mechanism, not a versioned migration system; add Alembic migrations and backups before production use.
 
 ## Verification
 

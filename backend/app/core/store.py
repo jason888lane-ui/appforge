@@ -156,3 +156,16 @@ def record_audit(
             "VALUES (?, ?, ?, ?, ?, ?)",
             (str(uuid4()), tenant_id, actor_id, event_type, resource_id, json.dumps(details)),
         )
+
+
+def create_tenant_member(
+    tenant_id: str, email: str, password_hash: str, role: str
+) -> dict[str, str]:
+    user_id = str(uuid4())
+    with engine.begin() as db:
+        db.execute(text(
+            "INSERT INTO users(id, tenant_id, email, password_hash, role) "
+            "VALUES (:id, :tenant, :email, :password, :role)"
+        ), {"id": user_id, "tenant": tenant_id, "email": email,
+            "password": password_hash, "role": role})
+    return {"user_id": user_id, "tenant_id": tenant_id, "email": email, "role": role}

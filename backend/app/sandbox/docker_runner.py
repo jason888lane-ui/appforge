@@ -25,12 +25,13 @@ def execute_python(source: str, timeout_seconds: int = 15) -> dict[str, object]:
         source_path = Path(temp_dir) / "main.py"
         source_path.write_text(source, encoding="utf-8")
         source_path.chmod(0o444)
+        Path(temp_dir).chmod(0o755)
         command = [
             "docker", "run", "--rm", "--pull=never",
             "--network=none", "--read-only", "--cap-drop=ALL",
             "--security-opt=no-new-privileges", "--memory=256m", "--cpus=1",
             "--pids-limit=64", "--user=65534:65534",
-            "--tmpfs", "/tmp:rw,noexec,nosuid,size=16m",
+            "--tmpfs", "/tmp:rw,noexec,nosuid,size=16m,uid=65534,gid=65534,mode=1777",
             "--mount", f"type=bind,src={temp_dir},dst=/workspace,readonly",
             "--workdir", "/workspace", "python:3.12-alpine",
             "python", "-I", "/workspace/main.py",

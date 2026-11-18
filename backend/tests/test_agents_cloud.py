@@ -1,5 +1,4 @@
 import pytest
-
 from app.agents.orchestrator import AgentOrchestrator, AgentRole
 from app.cloud.adapters import CloudProvider, create_deployment_plan
 

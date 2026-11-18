@@ -14,7 +14,6 @@ from app.core.auth import (
     Principal,
     hash_password,
     issue_token,
-    require_principal,
     require_roles,
     verify_password,
 )

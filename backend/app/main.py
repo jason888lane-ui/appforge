@@ -165,7 +165,7 @@ def get_runs(principal: Principal = member_dependency) -> list[dict[str, object]
 
 @app.post("/api/v1/agent-runs", tags=["agents"])
 def create_persistent_agent_run(
-    request: AgentRunRequest, principal: Principal = principal_dependency
+    request: AgentRunRequest, principal: Principal = editor_dependency
 ) -> dict[str, object]:
     if request.project_id and not store.project_belongs_to_tenant(
         request.project_id, principal.tenant_id
@@ -185,7 +185,7 @@ def create_persistent_agent_run(
 
 @app.post("/api/v1/models/complete", tags=["models"])
 async def complete_with_model(
-    request: ModelRequest, principal: Principal = principal_dependency
+    request: ModelRequest, principal: Principal = editor_dependency
 ) -> dict[str, str]:
     try:
         answer = await configured_provider(request.provider).complete(request.prompt)
@@ -200,7 +200,7 @@ async def complete_with_model(
 
 @app.post("/api/v1/sandbox/execute", tags=["sandbox"])
 def run_in_sandbox(
-    request: SandboxRequest, principal: Principal = principal_dependency
+    request: SandboxRequest, principal: Principal = owner_dependency
 ) -> dict[str, object]:
     if not store.project_belongs_to_tenant(request.project_id, principal.tenant_id):
         raise HTTPException(status_code=404, detail="Project not found")

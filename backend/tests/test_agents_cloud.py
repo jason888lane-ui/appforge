@@ -1,6 +1,7 @@
+import pytest
+
 from app.agents.orchestrator import AgentOrchestrator, AgentRole
 from app.cloud.adapters import CloudProvider, create_deployment_plan
-import pytest
 
 
 def test_orchestrator_proposes_six_specialist_tasks_without_execution():

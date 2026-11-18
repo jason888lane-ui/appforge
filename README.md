@@ -48,6 +48,8 @@ Set `OPENAI_API_KEY` or `ANTHROPIC_API_KEY` in the runtime environment. Then cal
 ## Isolated code execution
 
 The Docker sandbox is disabled by default. To opt in, set `APP_ENABLE_SANDBOX=true` and ensure the host Docker daemon already has `python:3.12-alpine` available. Sandbox runs use `--pull=never`, no network, read-only filesystem, dropped capabilities, no-new-privileges, memory/CPU/PID limits, a read-only source mount, and a 20-second maximum timeout. This is a defense-in-depth development sandbox, not a substitute for a hardened multi-tenant execution service or dedicated VM isolation.
+The sandbox runner is intentionally not connected to the API container's host Docker socket. The sandbox endpoint can run only where the API process has the Docker CLI and access to a dedicated Docker daemon with the image preloaded. In the supplied Compose deployment, the endpoint remains unavailable (503) even if the feature flag is enabled. Do not mount the host `docker.sock` into the web API; deploy a separately isolated sandbox worker before enabling execution in a containerized or shared environment.
+
 
 ## Safety boundaries
 

@@ -1,7 +1,8 @@
 from uuid import uuid4
 
-from app.main import app
 from fastapi.testclient import TestClient
+
+from app.main import app
 
 client = TestClient(app)
 
@@ -157,3 +158,61 @@ def test_sandbox_is_disabled_by_default():
         json={"project_id": project["id"], "source": "print('hello')"},
     )
     assert response.status_code == 503
+
+
+
+def test_owner_can_add_viewer_and_viewer_cannot_write():
+    owner_token, _ = register_tenant("RBAC Tenant")
+    created = client.post(
+        "/api/v1/team/members",
+        headers=auth(owner_token),
+        json={
+            "email": f"viewer-{uuid4().hex}@example.test",
+            "temporary_password": "temporary-password-123",
+            "role": "viewer",
+        },
+    )
+    assert created.status_code == 200
+    login = client.post(
+        "/api/v1/auth/login",
+        json={
+            "email": created.json()["email"],
+            "password": "temporary-password-123",
+        },
+    )
+    assert login.status_code == 200
+    viewer_token = login.json()["access_token"]
+    assert client.get("/api/v1/projects", headers=auth(viewer_token)).status_code == 200
+    denied = client.post(
+        "/api/v1/projects",
+        headers=auth(viewer_token),
+        json={"name": "Viewer cannot create"},
+    )
+    assert denied.status_code == 403
+
+
+def test_non_owner_cannot_provision_team_members():
+    owner_token, _ = register_tenant("Member Tenant")
+    viewer = client.post(
+        "/api/v1/team/members",
+        headers=auth(owner_token),
+        json={
+            "email": f"viewer-{uuid4().hex}@example.test",
+            "temporary_password": "temporary-password-123",
+            "role": "viewer",
+        },
+    )
+    login = client.post(
+        "/api/v1/auth/login",
+        json={"email": viewer.json()["email"], "password": "temporary-password-123"},
+    )
+    denied = client.post(
+        "/api/v1/team/members",
+        headers=auth(login.json()["access_token"]),
+        json={
+            "email": f"second-{uuid4().hex}@example.test",
+            "temporary_password": "temporary-password-456",
+            "role": "developer",
+        },
+    )
+    assert denied.status_code == 403

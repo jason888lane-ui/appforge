@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 
 from app.agents.orchestrator import AgentOrchestrator
 from app.cloud.adapters import CloudProvider, create_deployment_plan
+from app.core import store
 from app.core.approval import evaluate_production_approval
 from app.core.auth import (
     Principal,
@@ -16,7 +17,6 @@ from app.core.auth import (
     require_principal,
     verify_password,
 )
-from app.core import store
 from app.providers.models import ModelProviderError, configured_provider
 from app.sandbox.docker_runner import SandboxUnavailable, execute_python
 

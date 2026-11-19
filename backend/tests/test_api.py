@@ -1,6 +1,7 @@
 from uuid import uuid4
 
 from app.main import app
+from app.worker import process_one
 from fastapi.testclient import TestClient
 
 client = TestClient(app)
@@ -262,3 +263,45 @@ def test_viewer_cannot_check_production_approval():
         json={"target_environment": "production", "human_approved": True},
     )
     assert denied.status_code == 403
+
+
+
+def test_agent_job_queue_is_tenant_scoped():
+    token_a, _ = register_tenant("Queue Tenant A")
+    token_b, _ = register_tenant("Queue Tenant B")
+    queued = client.post(
+        "/api/v1/agent-jobs",
+        headers=auth(token_a),
+        json={"goal": "Create a queued agent workflow"},
+    )
+    assert queued.status_code == 200
+    job_id = queued.json()["id"]
+    assert queued.json()["status"] == "queued"
+    assert client.get(
+        f"/api/v1/agent-jobs/{job_id}", headers=auth(token_a)
+    ).status_code == 200
+    assert client.get(
+        f"/api/v1/agent-jobs/{job_id}", headers=auth(token_b)
+    ).status_code == 404
+
+
+def test_background_worker_completes_proposal_without_executing_code():
+    token, _ = register_tenant("Worker Tenant")
+    queued = client.post(
+        "/api/v1/agent-jobs",
+        headers=auth(token),
+        json={"goal": "Create a reviewable agent proposal"},
+    ).json()
+    assert process_one("test-worker") is True
+    job = client.get(
+        f"/api/v1/agent-jobs/{queued['id']}", headers=auth(token)
+    ).json()
+    assert job["status"] == "completed"
+    assert job["result_run_id"]
+    runs = client.get("/api/v1/runs", headers=auth(token)).json()
+    assert any(run["id"] == job["result_run_id"] for run in runs)
+    assert all(task["requires_human_review"] for run in runs for task in run["tasks"])
+
+
+def test_background_worker_returns_false_when_queue_is_empty():
+    assert process_one("idle-test-worker") is False

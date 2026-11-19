@@ -37,8 +37,9 @@ def test_dashboard_is_served():
 
 
 def test_plan_is_draft_and_never_executes():
+    token, _ = register_tenant("Plan Tenant")
     response = client.post(
-        "/api/v1/plans",
+        "/api/v1/plans", headers=auth(token),
         json={"goal": "Create a secure customer portal", "target_environment": "production"},
     )
     assert response.status_code == 200
@@ -49,36 +50,39 @@ def test_plan_is_draft_and_never_executes():
 
 
 def test_production_approval_fails_closed():
+    token, _ = register_tenant("Approval Tenant")
     response = client.post(
-        "/api/v1/approvals/check",
+        "/api/v1/approvals/check", headers=auth(token),
         json={"target_environment": "production", "human_approved": False},
     )
     assert response.json()["allowed"] is False
+    assert response.json()["execution_started"] is False
 
 
-def test_production_requires_named_approver():
+def test_approval_requires_owner_authentication():
     response = client.post(
         "/api/v1/approvals/check",
         json={"target_environment": "production", "human_approved": True},
     )
-    assert response.json()["allowed"] is False
+    assert response.status_code == 401
 
 
-def test_named_human_approval_passes_policy_check():
+def test_authenticated_owner_is_recorded_as_approver():
+    token, _ = register_tenant("Named Approver Tenant")
     response = client.post(
-        "/api/v1/approvals/check",
-        json={
-            "target_environment": "production",
-            "human_approved": True,
-            "approver_id": "operator-123",
-        },
+        "/api/v1/approvals/check", headers=auth(token),
+        json={"target_environment": "production", "human_approved": True},
     )
     assert response.json()["allowed"] is True
+    assert response.json()["approver_id"]
+    assert response.json()["execution_started"] is False
 
 
 def test_agent_run_returns_six_roles_and_does_not_execute():
+    token, _ = register_tenant("Agent Tenant")
     response = client.post(
-        "/api/v1/agents/runs", json={"goal": "Build a secure internal developer portal"}
+        "/api/v1/agents/runs", headers=auth(token),
+        json={"goal": "Build a secure internal developer portal"}
     )
     assert response.status_code == 200
     body = response.json()
@@ -87,8 +91,9 @@ def test_agent_run_returns_six_roles_and_does_not_execute():
 
 
 def test_cloud_plan_is_preview_only():
+    token, _ = register_tenant("Cloud Tenant")
     response = client.post(
-        "/api/v1/cloud/plan",
+        "/api/v1/cloud/plan", headers=auth(token),
         json={"provider": "aws", "environment": "staging", "region": "us-east-1"},
     )
     assert response.status_code == 200
@@ -213,5 +218,47 @@ def test_non_owner_cannot_provision_team_members():
             "temporary_password": "temporary-password-456",
             "role": "developer",
         },
+    )
+    assert denied.status_code == 403
+
+
+
+def test_legacy_agent_and_cloud_planner_endpoints_require_authentication():
+    agent = client.post(
+        "/api/v1/agents/runs",
+        json={"goal": "Build a secure internal developer portal"},
+    )
+    cloud = client.post(
+        "/api/v1/cloud/plan",
+        json={"provider": "aws", "environment": "staging", "region": "us-east-1"},
+    )
+    plan = client.post(
+        "/api/v1/plans",
+        json={"goal": "Create a secure customer portal"},
+    )
+    assert agent.status_code == 401
+    assert cloud.status_code == 401
+    assert plan.status_code == 401
+
+
+def test_viewer_cannot_check_production_approval():
+    owner_token, _ = register_tenant("Viewer Approval Tenant")
+    member = client.post(
+        "/api/v1/team/members",
+        headers=auth(owner_token),
+        json={
+            "email": f"viewer-{uuid4().hex}@example.test",
+            "temporary_password": "temporary-password-123",
+            "role": "viewer",
+        },
+    )
+    login = client.post(
+        "/api/v1/auth/login",
+        json={"email": member.json()["email"], "password": "temporary-password-123"},
+    )
+    denied = client.post(
+        "/api/v1/approvals/check",
+        headers=auth(login.json()["access_token"]),
+        json={"target_environment": "production", "human_approved": True},
     )
     assert denied.status_code == 403

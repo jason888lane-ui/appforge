@@ -4,7 +4,7 @@ Enterprise autonomous software-development platform. AppForge is an independent 
 
 ## Current implementation
 
-AppForge now includes a FastAPI dashboard/API, six-role deterministic agent planner, tenant-scoped persistent projects and agent-run records, signed bearer authentication, OpenAI-compatible and Anthropic model adapters, an opt-in Docker code sandbox, plan-only AWS/Azure/GCP adapters, and production approval checks.
+AppForge now includes a FastAPI dashboard/API, six-role deterministic agent planner, tenant-scoped persistent projects and agent-run records, a PostgreSQL/SQLite-backed background proposal queue with a separate worker process, signed bearer authentication, OpenAI-compatible and Anthropic model adapters, an opt-in Docker code sandbox, plan-only AWS/Azure/GCP adapters, and owner-gated production approval checks.
 
 This is an implementation foundation, not yet a production-ready autonomous coding platform. The agent planner still proposes work; model calls are explicit API requests, not autonomous agent loops. The API persistence layer now supports SQLite for direct local runs and PostgreSQL through SQLAlchemy. Workspace roles are owner, developer, and viewer; role checks are enforced server-side. Enterprise OIDC/SSO, MFA, managed database migrations, audit tamper-evidence, durable background queues, and production deployment workflows remain future work.
 
@@ -38,9 +38,10 @@ uvicorn app.main:app --app-dir backend --reload
 3. Create projects with `POST /api/v1/projects`.
 4. Create persisted agent proposals with `POST /api/v1/agent-runs`.
 5. Add tenant team members as an owner with `POST /api/v1/team/members` and assign `developer` or `viewer`.
-6. List only the authenticated tenant's projects and runs.
+6. Queue a background proposal with `POST /api/v1/agent-jobs`, then poll `GET /api/v1/agent-jobs/{job_id}`.
+7. List only the authenticated tenant's projects and runs.
 
-Role matrix: owners can administer the team and use all current workspace APIs; developers can create projects and agent proposals and use configured model calls; viewers can read workspace projects and runs. Sandbox execution is owner-only. Role changes are read from the database on each authenticated request so permission changes take effect without waiting for token expiry.
+Role matrix: owners can administer the team and use all current workspace APIs; developers can create projects and agent proposals and use configured model calls; viewers can read workspace projects and runs. Sandbox execution and production approval checks are owner-only. Role changes are read from the database on each authenticated request so permission changes take effect without waiting for token expiry.
 
 The tenant ID is derived from the signed token, never accepted as a caller-supplied tenant selector. Project access is checked against that tenant. Passwords are PBKDF2-HMAC-SHA256 hashes. Planning, agent-run preview, cloud-plan preview, and governance-check APIs require workspace authentication; production approval checks are owner-only and record the authenticated owner as approver rather than trusting a caller-supplied identity. Approval checks never execute deployments. The built-in token signer is a minimal first-party baseline; production must use a managed identity provider/enterprise OIDC and a secret manager.
 
@@ -51,6 +52,8 @@ Set `OPENAI_API_KEY` or `ANTHROPIC_API_KEY` in the runtime environment. Then cal
 ## Isolated code execution
 
 The Docker sandbox is disabled by default. To opt in, set `APP_ENABLE_SANDBOX=true` and ensure the host Docker daemon already has `python:3.12-alpine` available. Sandbox runs use `--pull=never`, no network, read-only filesystem, dropped capabilities, no-new-privileges, memory/CPU/PID limits, a read-only source mount, and a 20-second maximum timeout. This is a defense-in-depth development sandbox, not a substitute for a hardened multi-tenant execution service or dedicated VM isolation.
+The background worker claims persistent jobs with a database-backed lease, bounded retry count, and tenant ownership checks. It currently generates and saves deterministic six-role proposals only; it does not invoke models, execute generated code, or deploy resources. Docker Compose runs the worker as a separate service without mounting the Docker socket.
+
 The sandbox runner is intentionally not connected to the API container's host Docker socket. The sandbox endpoint can run only where the API process has the Docker CLI and access to a dedicated Docker daemon with the image preloaded. In the supplied Compose deployment, the endpoint remains unavailable (503) even if the feature flag is enabled. Do not mount the host `docker.sock` into the web API; deploy a separately isolated sandbox worker before enabling execution in a containerized or shared environment.
 
 

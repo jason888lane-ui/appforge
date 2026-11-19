@@ -42,7 +42,7 @@ uvicorn app.main:app --app-dir backend --reload
 
 Role matrix: owners can administer the team and use all current workspace APIs; developers can create projects and agent proposals and use configured model calls; viewers can read workspace projects and runs. Sandbox execution is owner-only. Role changes are read from the database on each authenticated request so permission changes take effect without waiting for token expiry.
 
-The tenant ID is derived from the signed token, never accepted as a caller-supplied tenant selector. Project access is checked against that tenant. Passwords are PBKDF2-HMAC-SHA256 hashes. The built-in token signer is a minimal first-party baseline; production must use a managed identity provider/enterprise OIDC and a secret manager.
+The tenant ID is derived from the signed token, never accepted as a caller-supplied tenant selector. Project access is checked against that tenant. Passwords are PBKDF2-HMAC-SHA256 hashes. Planning, agent-run preview, cloud-plan preview, and governance-check APIs require workspace authentication; production approval checks are owner-only and record the authenticated owner as approver rather than trusting a caller-supplied identity. Approval checks never execute deployments. The built-in token signer is a minimal first-party baseline; production must use a managed identity provider/enterprise OIDC and a secret manager.
 
 ## Model providers
 

@@ -78,7 +78,8 @@
       <label for="projectSelect">Active project</label><select id="projectSelect"><option value="">Sign in to load projects</option></select>
       <label for="goal">Development objective</label>
       <textarea id="goal">Build a secure customer portal with automated tests</textarea>
-      <button id="plan">Save six-agent proposal</button>
+      <button id="plan">Save six-agent proposal now</button>
+      <button id="queueAgent" class="secondary">Queue background agent proposal</button>
     </div>
   </section>
   <section class="layout" style="margin-top:16px">
@@ -202,6 +203,29 @@ document.getElementById("plan").addEventListener("click",async()=>{
     const data=await api("/api/v1/agent-runs",{method:"POST",body:JSON.stringify({goal:document.getElementById("goal").value,project_id:document.getElementById("projectSelect").value||null})});
     await loadRuns();show(data);
   }catch(e){show("Could not save agent proposal: "+e.message)}
+});
+document.getElementById("queueAgent").addEventListener("click",async()=>{
+  try{
+    const job=await api("/api/v1/agent-jobs",{method:"POST",body:JSON.stringify({
+      goal:document.getElementById("goal").value,
+      project_id:document.getElementById("projectSelect").value||null
+    })});
+    show({message:"Agent proposal queued",job});
+    for(let attempt=0;attempt<30;attempt++){
+      await new Promise(resolve=>setTimeout(resolve,1500));
+      const current=await api("/api/v1/agent-jobs/"+encodeURIComponent(job.id));
+      if(current.status==="completed"){
+        await loadRuns();
+        show({message:"Background proposal completed. It is saved for human review; no code was executed.",job:current});
+        return;
+      }
+      if(current.status==="failed"){
+        show({message:"Background proposal failed",job:current});
+        return;
+      }
+    }
+    show("The job is still queued or running. Use Refresh in Saved agent runs and check its job status.");
+  }catch(e){show("Could not queue agent proposal: "+e.message)}
 });
 document.getElementById("refresh").addEventListener("click",loadRuns);
 document.getElementById("complete").addEventListener("click",async()=>{

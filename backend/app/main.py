@@ -51,7 +51,6 @@ class PlanResponse(BaseModel):
 class ApprovalCheckRequest(BaseModel):
     target_environment: str = Field(pattern="^(development|staging|production)$")
     human_approved: bool = False
-    approver_id: str | None = None
 
 
 class AgentRunRequest(BaseModel):
@@ -243,7 +242,9 @@ def run_in_sandbox(
 
 
 @app.post("/api/v1/plans", response_model=PlanResponse, tags=["planning"])
-def create_plan(request: PlanRequest) -> PlanResponse:
+def create_plan(
+    request: PlanRequest, principal: Principal = member_dependency
+) -> PlanResponse:
     steps = [
         "Clarify acceptance criteria and constraints",
         "Inspect the target repository and identify affected components",
@@ -258,7 +259,9 @@ def create_plan(request: PlanRequest) -> PlanResponse:
 
 
 @app.post("/api/v1/agents/runs", tags=["agents"])
-def create_agent_run(request: AgentRunRequest) -> dict[str, object]:
+def create_agent_run(
+    request: AgentRunRequest, principal: Principal = editor_dependency
+) -> dict[str, object]:
     run = orchestrator.create_run(request.goal)
     return {
         "run_id": run.run_id, "goal": run.goal, "status": run.status,
@@ -275,7 +278,9 @@ def create_agent_run(request: AgentRunRequest) -> dict[str, object]:
 
 
 @app.post("/api/v1/cloud/plan", tags=["cloud"])
-def cloud_plan(request: CloudPlanRequest) -> dict[str, object]:
+def cloud_plan(
+    request: CloudPlanRequest, principal: Principal = member_dependency
+) -> dict[str, object]:
     try:
         plan = create_deployment_plan(
             provider=request.provider, environment=request.environment, region=request.region
@@ -290,9 +295,25 @@ def cloud_plan(request: CloudPlanRequest) -> dict[str, object]:
 
 
 @app.post("/api/v1/approvals/check", tags=["governance"])
-def check_approval(request: ApprovalCheckRequest) -> dict[str, object]:
+def check_approval(
+    request: ApprovalCheckRequest, principal: Principal = owner_dependency
+) -> dict[str, object]:
+    # The approver identity comes from the authenticated owner, never caller input.
     decision = evaluate_production_approval(
         environment=request.target_environment, human_approved=request.human_approved,
-        approver_id=request.approver_id,
+        approver_id=principal.user_id if request.human_approved else None,
     )
-    return {"allowed": decision.allowed, "reason": decision.reason}
+    store.record_audit(
+        principal.tenant_id, principal.user_id, "governance.approval_checked", None,
+        {
+            "environment": request.target_environment,
+            "human_approved": request.human_approved,
+            "allowed": decision.allowed,
+        },
+    )
+    return {
+        "allowed": decision.allowed,
+        "reason": decision.reason,
+        "approver_id": principal.user_id if request.human_approved else None,
+        "execution_started": False,
+    }

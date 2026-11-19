@@ -207,6 +207,29 @@ def create_persistent_agent_run(
     return store.save_agent_run(principal.tenant_id, request.project_id, request.goal, tasks)
 
 
+@app.post("/api/v1/agent-jobs", tags=["agents"])
+def enqueue_agent_proposal(
+    request: AgentRunRequest, principal: Principal = editor_dependency
+) -> dict[str, object]:
+    if request.project_id and not store.project_belongs_to_tenant(
+        request.project_id, principal.tenant_id
+    ):
+        raise HTTPException(status_code=404, detail="Project not found")
+    return store.enqueue_agent_job(
+        principal.tenant_id, principal.user_id, request.project_id, request.goal
+    )
+
+
+@app.get("/api/v1/agent-jobs/{job_id}", tags=["agents"])
+def get_agent_job_status(
+    job_id: str, principal: Principal = member_dependency
+) -> dict[str, object]:
+    job = store.get_agent_job(principal.tenant_id, job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="Agent job not found")
+    return job
+
+
 @app.post("/api/v1/models/complete", tags=["models"])
 async def complete_with_model(
     request: ModelRequest, principal: Principal = editor_dependency

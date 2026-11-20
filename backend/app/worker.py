@@ -46,7 +46,7 @@ def process_one(worker_id: str) -> bool:
             job["id"], {"run_id": run["id"], "worker_id": worker_id},
         )
         logger.info("Completed agent job %s as run %s", job["id"], run["id"])
-    except Exception as exc:  # noqa: BLE001 - worker must persist failures and continue.
+    except Exception as exc:
         store.fail_agent_job(job["id"], worker_id, str(exc))
         logger.exception("Agent job %s failed", job["id"])
     return True

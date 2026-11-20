@@ -1,7 +1,7 @@
 """Tenant-scoped SQL persistence for SQLite development and PostgreSQL deployments."""
 import json
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
@@ -218,7 +218,7 @@ def get_agent_job(tenant_id: str, job_id: str) -> dict[str, Any] | None:
 
 
 def claim_next_agent_job(worker_id: str, lease_seconds: int = 300) -> dict[str, Any] | None:
-    stale_before = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(seconds=lease_seconds)
+    stale_before = datetime.now(UTC).replace(tzinfo=None) - timedelta(seconds=lease_seconds)
     with engine.begin() as db:
         db.execute(text(
             "UPDATE agent_jobs SET status = 'failed', locked_by = NULL, locked_at = NULL, "
